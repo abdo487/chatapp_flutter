@@ -1,7 +1,12 @@
 import 'package:chatapp_flutter_1/models/login_model.dart';
+import 'package:chatapp_flutter_1/models/login_response_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../outside_code/snippet_code_utils_modified/FormHelper.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -12,7 +17,8 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   GlobalKey<FormState> globalKey = GlobalKey<FormState>();
-  LoginUserModel loginModel = LoginUserModel(email: "Abdo", password: "sdfksiodhf");
+  LoginUserModel loginModel =
+      LoginUserModel(email: "abdomouak@gmail.com", password: "123456");
 
   @override
   void initState() {
@@ -35,6 +41,45 @@ class _LoginPageState extends State<LoginPage> {
       _password_error = error;
     });
   }
+
+  Future<void> loginUser() async {
+    const String apiUrl =
+        'http:localhost:3000'; // Replace with your actual API endpoint
+
+    final response = await http.post(
+      Uri.parse(apiUrl),
+      body: {
+        'email': loginModel.email,
+        'password': loginModel.password,
+      },
+    );
+
+    if (response.statusCode == 200) {
+      // Successful login
+      final jsonResponse = json.decode(response.body);
+
+      // Assuming your response model class is LoginResponseModel
+      LoginResponseModel loginResponse = LoginResponseModel.fromJson(jsonResponse);
+
+      if(loginResponse.type == "LOGIN_SUCCESS"){
+        // Save user credentials to SharedPreferences
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        prefs.setString('token', loginResponse.data);
+        prefs.setString('userId', loginResponse.data['_id']);
+
+        // USING GETx navigate to the home page
+
+      }
+      
+
+      
+    } else {
+      // Handle error
+      print('Login failed. Status code: ${response.statusCode}');
+    }
+  }
+
+  // submitting
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +115,7 @@ class _LoginPageState extends State<LoginPage> {
                     (String value) {
                       loginModel.email = value;
                     },
-                    initialValue: loginModel.email??"",
+                    initialValue: loginModel.email ?? "",
                     prefixIcon: const Icon(Icons.email),
                     showPrefixIcon: true,
                     prefixIconPaddingLeft: 10,
@@ -91,7 +136,7 @@ class _LoginPageState extends State<LoginPage> {
                         )
                       : Container(padding: const EdgeInsets.all(5)),
 
-                  // Password input field 
+                  // Password input field
                   FormHelper.inputFieldWidget(
                     context,
                     "Email",
@@ -106,7 +151,7 @@ class _LoginPageState extends State<LoginPage> {
                     (String value) {
                       loginModel.password = value;
                     },
-                    initialValue: loginModel.password??"",
+                    initialValue: loginModel.password ?? "",
                     prefixIcon: const Icon(Icons.lock),
                     showPrefixIcon: true,
                     prefixIconPaddingLeft: 10,
@@ -152,7 +197,7 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                   ),
-                  
+
                   // Submit button
                   Padding(
                     padding: const EdgeInsets.only(left: 20.0, right: 20.0),
@@ -169,44 +214,43 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   // Or
                   Padding(
-                    padding: const EdgeInsets.only(top: 30.0, left: 50.0, right: 50.0),
-                    child: Stack(
-                      // make the stack appear in the top of it parent
-                      clipBehavior: Clip.none,
-                      children: [
-                        Container(
-                          width: double.infinity,
-                          height: 1,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(1.0),
-                            color: Colors.grey,
-                          ),
-                        ),
-                        Positioned(
-                          top: -20.0,
-                          left: MediaQuery.of(context).size.width / 2 - 80.0,
-                          child: Container(
-                            width: 40,
-                            height: 40,
+                      padding: const EdgeInsets.only(
+                          top: 30.0, left: 50.0, right: 50.0),
+                      child: Stack(
+                        // make the stack appear in the top of it parent
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            height: 1,
                             decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(50),
+                              borderRadius: BorderRadius.circular(1.0),
+                              color: Colors.grey,
                             ),
-                            child: const Center(
-                              child: Text(
-                                "OR",
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontWeight: FontWeight.bold,
+                          ),
+                          Positioned(
+                            top: -20.0,
+                            left: MediaQuery.of(context).size.width / 2 - 80.0,
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(50),
+                              ),
+                              child: const Center(
+                                child: Text(
+                                  "OR",
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                        
-                      ],
-                    )
-                  ),
+                        ],
+                      )),
                   // Sign up
                   Padding(
                     padding: const EdgeInsets.only(top: 20.0),
