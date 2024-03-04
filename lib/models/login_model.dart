@@ -10,7 +10,7 @@ class LoginUserModel{
       password: json['password'],
     );
   }
-
+  
   Map<String, dynamic> toJson() => {
     'email': email,
     'password': password,

@@ -1,12 +1,10 @@
+import 'package:chatapp_flutter_1/controllers/login_controller.dart';
 import 'package:chatapp_flutter_1/models/login_model.dart';
-import 'package:chatapp_flutter_1/models/login_response_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:chatapp_flutter_1/outside_code/snippet_code_utils_modified/FormHelper.dart';
+import 'package:chatapp_flutter_1/services/auth_service.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../outside_code/snippet_code_utils_modified/FormHelper.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -19,67 +17,7 @@ class _LoginPageState extends State<LoginPage> {
   GlobalKey<FormState> globalKey = GlobalKey<FormState>();
   LoginUserModel loginModel =
       LoginUserModel(email: "abdomouak@gmail.com", password: "123456");
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  String _email_error = "";
-  String _password_error = "";
-
-  bool isPasswordVisible = false;
-
-  void onEmailError(String error) {
-    setState(() {
-      _email_error = error;
-    });
-  }
-
-  void onPasswordError(String error) {
-    setState(() {
-      _password_error = error;
-    });
-  }
-
-  Future<void> loginUser() async {
-    const String apiUrl =
-        'http:localhost:3000'; // Replace with your actual API endpoint
-
-    final response = await http.post(
-      Uri.parse(apiUrl),
-      body: {
-        'email': loginModel.email,
-        'password': loginModel.password,
-      },
-    );
-
-    if (response.statusCode == 200) {
-      // Successful login
-      final jsonResponse = json.decode(response.body);
-
-      // Assuming your response model class is LoginResponseModel
-      LoginResponseModel loginResponse = LoginResponseModel.fromJson(jsonResponse);
-
-      if(loginResponse.type == "LOGIN_SUCCESS"){
-        // Save user credentials to SharedPreferences
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        prefs.setString('token', loginResponse.data);
-        prefs.setString('userId', loginResponse.data['_id']);
-
-        // USING GETx navigate to the home page
-
-      }
-      
-
-      
-    } else {
-      // Handle error
-      print('Login failed. Status code: ${response.statusCode}');
-    }
-  }
-
-  // submitting
+  LoginController controller = Get.find();
 
   @override
   Widget build(BuildContext context) {
@@ -107,10 +45,10 @@ class _LoginPageState extends State<LoginPage> {
                     "Enter your email",
                     (String value) {
                       if (value.isEmpty) {
-                        onEmailError("Email is Required");
+                        controller.onEmailError("Email is Required");
                         return null;
                       }
-                      onEmailError("");
+                      controller.onEmailError("");
                     },
                     (String value) {
                       loginModel.email = value;
@@ -126,60 +64,66 @@ class _LoginPageState extends State<LoginPage> {
                     hintColor: Colors.grey,
                     hintFontSize: 16,
                   ),
-                  _email_error != ""
-                      ? Container(
-                          alignment: Alignment.centerLeft,
-                          padding: const EdgeInsets.only(
-                              left: 25.0, right: 25.0, top: 5.0, bottom: 5.0),
-                          child: Text(_email_error,
-                              style: const TextStyle(color: Colors.red)),
-                        )
-                      : Container(padding: const EdgeInsets.all(5)),
-
-                  // Password input field
-                  FormHelper.inputFieldWidget(
-                    context,
-                    "Email",
-                    "Enter your password",
-                    (String value) {
-                      if (value.isEmpty) {
-                        onPasswordError("Password is Required");
-                        return null;
-                      }
-                      onPasswordError("");
-                    },
-                    (String value) {
-                      loginModel.password = value;
-                    },
-                    initialValue: loginModel.password ?? "",
-                    prefixIcon: const Icon(Icons.lock),
-                    showPrefixIcon: true,
-                    prefixIconPaddingLeft: 10,
-                    prefixIconColor: Colors.grey,
-                    suffixIcon: IconButton(
-                      onPressed: () => setState(
-                          () => isPasswordVisible = !isPasswordVisible),
-                      icon: Icon(isPasswordVisible
-                          ? Icons.visibility_off
-                          : Icons.visibility),
-                      color: Colors.grey,
-                    ),
-                    obscureText: !isPasswordVisible,
-                    borderColor: Colors.grey,
-                    borderFocusColor: const Color.fromARGB(255, 0, 120, 255),
-                    borderRadius: 10,
-                    hintColor: Colors.grey,
-                    hintFontSize: 16,
-                  ),
-                  _password_error != ""
-                      ? Container(
-                          alignment: Alignment.centerLeft,
-                          padding: const EdgeInsets.only(
-                              left: 25.0, right: 25.0, top: 5.0),
-                          child: Text(_password_error,
-                              style: const TextStyle(color: Colors.red)),
-                        )
-                      : Container(),
+                  // these next widget depends on some getx state
+                  GetBuilder<LoginController>(builder: (tap){
+                    return Column(
+                      children: [
+                        controller.emailError != ""
+                          ? Container(
+                              alignment: Alignment.centerLeft,
+                              padding: const EdgeInsets.only(
+                                  left: 25.0, right: 25.0, top: 5.0, bottom: 5.0),
+                              child: Text(controller.emailError,
+                                  style: const TextStyle(color: Colors.red)),
+                            )
+                          : Container(padding: const EdgeInsets.all(5)),
+                        FormHelper.inputFieldWidget(
+                          context,
+                          "Password",
+                          "Enter your password",
+                          (String value) {
+                            if (value.isEmpty) {
+                              controller.onPasswordError("Password is Required");
+                              return null;
+                            }
+                            controller.onPasswordError("");
+                          },
+                          (String value) {
+                            loginModel.password = value;
+                          },
+                          initialValue: loginModel.password ?? "",
+                          prefixIcon: const Icon(Icons.lock),
+                          showPrefixIcon: true,
+                          prefixIconPaddingLeft: 10,
+                          prefixIconColor: Colors.grey,
+                          suffixIcon: IconButton(
+                            onPressed: controller.switchPasswordVisibility,
+                            icon: Icon(
+                                    controller.isPasswordVisible
+                                      ? Icons.visibility_off
+                                      : Icons.visibility
+                                  ),
+                            color: Colors.grey,
+                          ),
+                          obscureText: !controller.isPasswordVisible,
+                          borderColor: Colors.grey,
+                          borderFocusColor: const Color.fromARGB(255, 0, 120, 255),
+                          borderRadius: 10,
+                          hintColor: Colors.grey,
+                          hintFontSize: 16,
+                        ),
+                        controller.passwordError != ""
+                            ? Container(
+                                alignment: Alignment.centerLeft,
+                                padding: const EdgeInsets.only(
+                                    left: 25.0, right: 25.0, top: 5.0),
+                                child: Text(controller.passwordError,
+                                    style: const TextStyle(color: Colors.red)),
+                              )
+                            : Container()
+                      ],
+                    );
+                  }),
                   // forgot password
                   Padding(
                     padding: const EdgeInsets.only(right: 20.0),
@@ -204,6 +148,10 @@ class _LoginPageState extends State<LoginPage> {
                     child: FormHelper.submitButton('Login', () {
                       if (globalKey.currentState!.validate()) {
                         globalKey.currentState!.save();
+                        String email = loginModel.email ?? "";
+                        String password = loginModel.password ?? "";
+
+                        loginUser(email, password);
                       }
                     },
                         btnColor: const Color.fromARGB(255, 0, 120, 255),
